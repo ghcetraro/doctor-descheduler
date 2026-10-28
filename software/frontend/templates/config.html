@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+
+{% block title %}Configuracion · {{ app_name }}{% endblock %}
+{% block page_title %}Configuracion{% endblock %}
+{% block page_subtitle %}<p class="subtitle">Apariencia, backup, API, instalar y usuarios.</p>{% endblock %}
+
+{% block content %}
+<section class="panel tabs" data-tabs data-initial-tab="{{ active_tab }}">
+  {% if import_ok %}<p class="notice success">Backup importado correctamente.</p>{% endif %}
+  {% if token_ok and new_api_token %}<p class="notice success">Token creado. Copialo ahora; no se volvera a mostrar.</p>{% endif %}
+  {% if token_revoked %}<p class="notice success">Token revocado.</p>{% endif %}
+  {% if user_ok %}<p class="notice success">Usuario creado.</p>{% endif %}
+  {% if user_updated %}<p class="notice success">Usuario actualizado.</p>{% endif %}
+  {% if user_deleted %}<p class="notice success">Usuario eliminado.</p>{% endif %}
+  {% if error %}<p class="notice error" role="alert">{{ error }}</p>{% endif %}
+
+  <div class="tabs-list" role="tablist" aria-label="Secciones de configuracion">
+    <button type="button" class="tabs-trigger{% if active_tab == 'apariencia' %} active{% endif %}" role="tab" data-tab="apariencia">Apariencia</button>
+    {% if can_write %}<button type="button" class="tabs-trigger{% if active_tab == 'backup' %} active{% endif %}" role="tab" data-tab="backup" tabindex="-1">Backup</button>{% endif %}
+    <button type="button" class="tabs-trigger{% if active_tab == 'servicio' %} active{% endif %}" role="tab" data-tab="servicio" tabindex="-1">Servicio</button>
+    <button type="button" class="tabs-trigger{% if active_tab == 'api' %} active{% endif %}" role="tab" data-tab="api" tabindex="-1">API</button>
+    <button type="button" class="tabs-trigger{% if active_tab == 'instalar' %} active{% endif %}" role="tab" data-tab="instalar" tabindex="-1">Instalar</button>
+    {% if is_admin %}<button type="button" class="tabs-trigger{% if active_tab == 'usuarios' %} active{% endif %}" role="tab" data-tab="usuarios" tabindex="-1">Usuarios</button>{% endif %}
+  </div>
+
+  <div class="tabs-panel{% if active_tab == 'apariencia' %} active{% endif %}" data-tab-panel="apariencia"{% if active_tab != 'apariencia' %} hidden{% endif %}>
+    <h2>Apariencia</h2>
+    <p id="theme-setting-desc" class="hint">Modo oscuro activo</p>
+    <div class="theme-options">
+      <button type="button" class="btn secondary theme-option" data-theme-option="dark" aria-pressed="true">Oscuro</button>
+      <button type="button" class="btn secondary theme-option" data-theme-option="light" aria-pressed="false">Claro</button>
+    </div>
+    <p class="hint">Queda guardado para todos los que entran.</p>
+  </div>
+
+  {% if can_write %}
+  <div class="tabs-panel{% if active_tab == 'backup' %} active{% endif %}" data-tab-panel="backup"{% if active_tab != 'backup' %} hidden{% endif %}>
+    <div class="layout-two-col">
+      <section class="panel panel-nested">
+        <h2>Exportar</h2>
+        <p class="hint-block">Descarga un backup JSON con los datos de la app.</p>
+        <a href="/config/exportar" class="button primary">Descargar JSON</a>
+      </section>
+      <section class="panel panel-nested">
+        <h2>Importar archivo</h2>
+        <p class="hint-block warning">Reemplaza los datos actuales por los del JSON.</p>
+        <form method="post" action="/config/importar" enctype="multipart/form-data" class="form-grid">
+          <label class="full">Archivo JSON<input type="file" name="backup" accept=".json,application/json" required></label>
+          <label class="checkbox full"><input type="checkbox" name="confirmar" value="1" required> Confirmo el reemplazo total</label>
+          <div class="form-actions full"><button type="submit" class="button primary">Importar backup</button></div>
+        </form>
+      </section>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="tabs-panel{% if active_tab == 'servicio' %} active{% endif %}" data-tab-panel="servicio"{% if active_tab != 'servicio' %} hidden{% endif %}>
+    <h2>Servicio</h2>
+    <dl class="kv">
+      <dt>Versión</dt><dd>{{ app_version }}</dd>
+      <dt>App</dt><dd><code>{{ app_slug }}</code></dd>
+    </dl>
+  </div>
+
+  <div class="tabs-panel{% if active_tab == 'api' %} active{% endif %}" data-tab-panel="api"{% if active_tab != 'api' %} hidden{% endif %}>
+    {% if is_admin and new_api_token %}
+    <div class="panel panel-nested api-token-flash">
+      <h2>Token nuevo: {{ new_api_token_name }}</h2>
+      <div class="token-display-row">
+        <code id="new-api-token" class="token-value">{{ new_api_token }}</code>
+        <button type="button" class="btn secondary" id="btn-copy-api-token">Copiar</button>
+      </div>
+    </div>
+    {% endif %}
+
+    <p class="hint-block">La fila <code>helm</code> es el token de fabrica: valor de <code>API_TOKEN</code> en los values. Se crea al arrancar y no se revoca.</p>
+
+    {% if is_admin %}
+    <div class="panel panel-nested">
+      <h2>Crear token</h2>
+      <form method="post" action="/config/api/crear" class="form-grid">
+        <label class="full">Nombre<input type="text" name="name" required placeholder="Ej: backup, ci"></label>
+        <div class="form-actions full"><button type="submit" class="button primary">Generar token</button></div>
+      </form>
+    </div>
+    <div class="panel panel-nested">
+      <h2>Tokens activos</h2>
+      {% if api_tokens %}
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Nombre</th><th>Token</th><th>Creado</th><th></th></tr></thead>
+          <tbody>
+            {% for token in api_tokens %}
+            <tr>
+              <td>{{ token.name }}</td>
+              <td>{% if token.token_value %}<code class="token-value">{{ token.token_value }}</code>{% else %}<code>{{ token.token_prefix }}…</code>{% endif %}</td>
+              <td>{{ token.created_at }}</td>
+              <td class="actions">{% if token.name != 'helm' %}<a href="/config/api/eliminar/{{ token.id }}" class="danger-text" data-confirm="¿Revocar {{ token.name }}?">Revocar</a>{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}<p class="empty">No hay tokens.</p>{% endif %}
+    </div>
+    {% endif %}
+
+    <h2>Uso de la API</h2>
+    <p class="hint-block">Headers: <code>Authorization: Bearer TOKEN</code> o <code>X-API-Token: TOKEN</code></p>
+    {% block api_endpoints %}
+    <ul class="api-endpoint-list">
+      <li><code>GET /health</code> — Health check</li>
+      <li><code>GET /api/v1/fleet</code> — Resumen de los cinco clusters</li>
+      <li><code>POST /api/v1/clusters/{id}/run</code> — Ejecutar ahora la pasada de un cluster</li>
+      <li><code>GET /api/v1/clusters/{id}/progress</code> — Log de la pasada en curso</li>
+      <li><code>GET /api/v1/appearance</code> — Tema claro u oscuro</li>
+      <li><code>POST /api/v1/appearance</code> — Guardar el tema</li>
+      <li><code>GET /api/v1/clusters/{id}</code> — Política y última corrida</li>
+      <li><code>GET /api/v1/history</code> — Historial de Jobs</li>
+      <li><code>GET /api/export</code> — Backup JSON</li>
+      <li><code>POST /api/import</code> — Restore JSON</li>
+    </ul>
+    {% endblock %}
+  </div>
+
+
+  <div class="tabs-panel{% if active_tab == 'instalar' %} active{% endif %}" role="tabpanel" id="config-panel-instalar" data-tab-panel="instalar"{% if active_tab != 'instalar' %} hidden{% endif %}>
+    <h2>Instalar en el teléfono</h2>
+    <p class="hint-block">Agregá esta app a la pantalla de inicio para usarla como aplicación (PWA). En el cluster hace falta HTTPS.</p>
+    <div class="form-actions">
+      <button type="button" class="button primary" data-pwa-install>Instalar app</button>
+    </div>
+    <p class="hint" data-pwa-install-status></p>
+    <p class="hint-block" data-pwa-ios-hint hidden>En iPhone / iPad: Safari → botón <strong>Compartir</strong> → <strong>Agregar a pantalla de inicio</strong>.</p>
+  </div>
+
+  {% if is_admin %}
+  <div class="tabs-panel{% if active_tab == 'usuarios' %} active{% endif %}" data-tab-panel="usuarios"{% if active_tab != 'usuarios' %} hidden{% endif %}>
+    <div class="panel panel-nested">
+      <h2>{% if edit_user %}Editar usuario{% else %}Crear usuario{% endif %}</h2>
+      <form method="post" action="/config/usuarios/guardar" class="form-grid" id="user-form">
+        {% if edit_user %}<input type="hidden" name="user_id" value="{{ edit_user.id }}">{% endif %}
+        {% if not edit_user and oidc_enabled %}
+        <fieldset class="auth-type-fieldset full">
+          <legend>Tipo de acceso</legend>
+          <label class="auth-type-option"><input type="radio" name="auth_type" value="local" checked data-user-auth-toggle> Local</label>
+          <label class="auth-type-option"><input type="radio" name="auth_type" value="oidc" data-user-auth-toggle> OIDC (email)</label>
+        </fieldset>
+        {% else %}<input type="hidden" name="auth_type" value="local">{% endif %}
+        <label data-user-field="local"{% if edit_user and edit_user.auth_type == 'oidc' %} hidden{% endif %}>Usuario<input type="text" name="username"{% if not edit_user %} data-user-local-required{% endif %}></label>
+        <label data-user-field="oidc" hidden>Email OIDC<input type="email" name="email" data-user-oidc-required></label>
+        <label data-user-field="local"{% if edit_user and edit_user.auth_type == 'oidc' %} hidden{% endif %}>Contraseña<input type="password" name="password" minlength="6"></label>
+        <label>Rol<select name="role"><option value="readonly">Solo lectura</option><option value="admin">Administrador</option></select></label>
+        <div class="form-actions full"><button type="submit" class="button primary">Guardar</button></div>
+      </form>
+    </div>
+    <div class="panel panel-nested">
+      <h2>Usuarios</h2>
+      {% if app_users %}
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Usuario</th><th>Email</th><th>Rol</th><th></th></tr></thead>
+          <tbody>
+            {% for user in app_users %}
+            <tr>
+              <td>{{ user.username }}</td><td>{{ user.email or "—" }}</td><td>{{ user.role }}</td>
+              <td class="actions">
+                {% if user.id != current_user_id %}<a href="/config/usuarios/eliminar/{{ user.id }}" class="danger-text" data-confirm="¿Eliminar {{ user.username }}?">Eliminar</a>{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}<p class="empty">Sin usuarios.</p>{% endif %}
+    </div>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById("btn-copy-api-token")?.addEventListener("click", function () {
+  var el = document.getElementById("new-api-token");
+  if (el) navigator.clipboard.writeText(el.textContent || "").catch(function () {});
+});
+document.querySelectorAll("[data-confirm]").forEach(function (link) {
+  link.addEventListener("click", function (e) {
+    if (!window.confirm(link.getAttribute("data-confirm") || "")) e.preventDefault();
+  });
+});
+</script>
+{% endblock %}

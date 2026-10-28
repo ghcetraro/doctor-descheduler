@@ -1,0 +1,4 @@
+# Fragmento para requirements.txt de apps con front web FastAPI
+python-multipart>=0.0.9
+jinja2>=3.1.0
+itsdangerous>=2.2.0

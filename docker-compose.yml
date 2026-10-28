@@ -1,0 +1,31 @@
+services:
+  api:
+    build: ./software/backend
+    environment:
+      API_TOKEN: ${API_TOKEN:-change-me-token}
+      DRY_RUN: ${DRY_RUN:-true}
+      CLUSTER_IDS: ${CLUSTER_IDS:-cluster-a,cluster-b}
+      ARGOCD_NAMESPACE: ${ARGOCD_NAMESPACE:-argocd}
+      LOG_LEVEL: info
+      TZ: America/Argentina/Buenos_Aires
+    ports:
+      - "8000:8000"
+
+  web:
+    build: ./software/frontend
+    depends_on:
+      - api
+    environment:
+      BACKEND_URL: http://api:8000
+      API_TOKEN: ${API_TOKEN:-change-me-token}
+      SESSION_SECRET: ${SESSION_SECRET:-change-me-session}
+      SERVICE_USER: ${SERVICE_USER:-admin}
+      SERVICE_PASSWORD: ${SERVICE_PASSWORD:-change-me}
+      APP_NAME: Doctor Descheduler
+      APP_SLUG: doctor-descheduler
+      OIDC_ENABLED: "false"
+      LOCAL_AUTH_ENABLED: "true"
+      LOG_LEVEL: info
+      TZ: America/Argentina/Buenos_Aires
+    ports:
+      - "8080:8080"

@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · {{ app_name }}{% endblock %}
+{% block meta_refresh %}<meta http-equiv="refresh" content="300">{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block page_subtitle %}
+<p class="subtitle">
+  Uso por cluster
+  <button type="button" class="info-btn" data-info-for="info-dashboard" aria-label="Más información" title="Más información">i</button>
+</p>
+<template id="info-dashboard">
+  Resumen de carga por cluster según la última corrida del descheduler. Clic en el nombre del cluster para ver política, nodos y evictions.
+  La página se actualiza sola cada 5 minutos.
+</template>
+{% endblock %}
+{% block content %}
+{% if load_error %}
+<p class="notice error" role="alert">No se pudo leer la API: {{ load_error }}</p>
+{% endif %}
+<section class="panel">
+  <div class="panel-heading">
+    <h2>Métricas</h2>
+  </div>
+  <div class="metric-legend" aria-label="Qué significa cada valor">
+    <span class="metric-legend-item">
+      Uso total
+      <button type="button" class="info-btn" data-info-for="info-usage-total" data-info-title="Uso total" aria-label="Qué es uso total" title="Más información">i</button>
+    </span>
+    <span class="metric-legend-item">
+      CPU
+      <button type="button" class="info-btn" data-info-for="info-usage-cpu" data-info-title="CPU" aria-label="Qué es CPU" title="Más información">i</button>
+    </span>
+    <span class="metric-legend-item">
+      Memoria
+      <button type="button" class="info-btn" data-info-for="info-usage-memory" data-info-title="Memoria" aria-label="Qué es memoria" title="Más información">i</button>
+    </span>
+    <span class="metric-legend-item">
+      Pods
+      <button type="button" class="info-btn" data-info-for="info-usage-pods" data-info-title="Pods" aria-label="Qué es pods" title="Más información">i</button>
+    </span>
+    <span class="metric-legend-item">
+      Barra
+      <button type="button" class="info-btn" data-info-for="info-usage-bar" data-info-title="Barra de uso" aria-label="Qué es la barra" title="Más información">i</button>
+    </span>
+  </div>
+  <template id="info-usage-total">
+    Porcentaje resumido del cluster: promedio simple de CPU, memoria y pods de los nodos en la última corrida. Un valor alto indica presión general; no es un límite de Kubernetes.
+  </template>
+  <template id="info-usage-cpu">
+    Uso de CPU de cada nodo respecto a su capacidad allocatable, calculado con los requests de los pods en la última pasada.
+  </template>
+  <template id="info-usage-memory">
+    Uso de memoria del nodo vs capacidad. Nodos por encima del umbral de la policy se marcan como sobreutilizados; por debajo, subutilizados.
+  </template>
+  <template id="info-usage-pods">
+    Cantidad de pods en el nodo comparada con la capacidad máxima de pods del nodo. Ayuda a ver saturación de scheduling además de CPU/RAM.
+  </template>
+  <template id="info-usage-bar">
+    Representación visual del <strong>uso total</strong> (0–100&nbsp;%). Si no hay datos recientes, la barra queda vacía y el detalle muestra el error o «sin nodos».
+  </template>
+  <div class="usage-list">
+    {% for row in clusters %}
+    <article class="usage-row">
+      <div class="usage-head">
+        <a href="/cluster/{{ row.id }}">{{ row.id }}</a>
+        <strong>{% if row.usage is not none %}{{ row.usage }}%{% else %}—{% endif %}</strong>
+      </div>
+      <div class="usage-bar" aria-hidden="true">
+        <span style="width: {{ row.usage if row.usage is not none else 0 }}%"></span>
+      </div>
+      <p class="usage-detail">
+        {% if row.usage is not none %}
+        CPU {{ row.cpu }}% · memoria {{ row.memory }}% · pods {{ row.pods }}%
+        {% elif row.ok %}
+        Sin nodos en la última corrida
+        {% else %}
+        {{ row.error or "sin datos" }}
+        {% endif %}
+      </p>
+    </article>
+    {% else %}
+    <p class="empty">Sin clusters configurados.</p>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

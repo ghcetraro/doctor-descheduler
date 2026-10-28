@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es" data-app-slug="doctor-descheduler" data-theme="{{ theme | default('dark') }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="{% if theme == 'light' %}#f4f6f8{% else %}#0f1419{% endif %}">
+  <title>Login · Doctor Descheduler</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="login-page">
+  <div class="login-card">
+    <h1>{{ app_name | default("Doctor Descheduler") }}</h1>
+    <p class="hint">{{ app_tagline | default("Panel web") }}</p>
+
+    {% if error %}
+    <p class="notice error" role="alert">Credenciales invalidas.</p>
+    {% endif %}
+
+    {% if oidc_enabled %}
+    <a class="btn primary block" href="/oidc/login">Ingresar con OpenID</a>
+    {% if local_enabled %}
+    <p class="login-divider"><span>o con usuario local</span></p>
+    {% endif %}
+    {% endif %}
+
+    {% if local_enabled %}
+    <form method="post" action="/login" class="form-grid login-form">
+      <label class="full">
+        Usuario
+        <input type="text" name="username" required autocomplete="username" autofocus>
+      </label>
+      <label class="full">
+        Contraseña
+        <input type="password" name="password" required autocomplete="current-password">
+      </label>
+      <button type="submit" class="button primary block">Entrar</button>
+    </form>
+    {% elif not oidc_enabled %}
+    <p class="hint">Autenticación deshabilitada en este entorno.</p>
+    <a class="btn primary block" href="/">Continuar</a>
+    {% endif %}
+  </div>
+</body>
+</html>

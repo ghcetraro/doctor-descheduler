@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Flota · {{ app_name }}{% endblock %}
+{% block meta_refresh %}<meta http-equiv="refresh" content="300">{% endblock %}
+{% block page_title %}Flota{% endblock %}
+{% block page_subtitle %}
+<p class="subtitle">
+  Doctor Descheduler
+  <button type="button" class="info-btn" data-info-for="info-fleet" aria-label="Más información" title="Más información">i</button>
+</p>
+<template id="info-fleet">
+  Un solo proceso entra a los clusters configurados cada 15 minutos.
+  Ejecutar dispara esa pasada ahora, solo para ese cluster.
+  Con dry-run no mueve pods: solo anota qué habría hecho.
+</template>
+{% endblock %}
+{% block content %}
+{% if load_error %}
+<p class="notice error" role="alert">No se pudo leer la API: {{ load_error }}</p>
+{% endif %}
+{% if flash %}
+<p class="notice {{ flash.level }}" role="status">{{ flash.message }}</p>
+{% endif %}
+<section class="panel">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>
+            Cluster
+            <button type="button" class="info-btn" data-info-for="info-col-cluster" data-info-title="Cluster" aria-label="Qué es cluster" title="Más información">i</button>
+          </th>
+          <th>
+            Estado
+            <button type="button" class="info-btn" data-info-for="info-col-agent" data-info-title="Estado" aria-label="Qué es estado" title="Más información">i</button>
+          </th>
+          <th>
+            Modo
+            <button type="button" class="info-btn" data-info-for="info-col-mode" data-info-title="Modo" aria-label="Qué es modo" title="Más información">i</button>
+          </th>
+          <th>
+            Última corrida
+            <button type="button" class="info-btn" data-info-for="info-col-last-run" data-info-title="Última corrida" aria-label="Qué es última corrida" title="Más información">i</button>
+          </th>
+          <th>
+            Nodos altos
+            <button type="button" class="info-btn" data-info-for="info-col-over" data-info-title="Nodos altos" aria-label="Qué son nodos altos" title="Más información">i</button>
+          </th>
+          <th>
+            Nodos bajos
+            <button type="button" class="info-btn" data-info-for="info-col-under" data-info-title="Nodos bajos" aria-label="Qué son nodos bajos" title="Más información">i</button>
+          </th>
+          <th>
+            Evictions
+            <button type="button" class="info-btn" data-info-for="info-col-evictions" data-info-title="Evictions" aria-label="Qué son evictions" title="Más información">i</button>
+          </th>
+          <th>Acción</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in clusters %}
+        <tr data-cluster="{{ row.id }}">
+          <td><a href="/cluster/{{ row.id }}">{{ row.id }}</a></td>
+          <td data-field="status">{% if row.ok %}ok{% else %}{{ row.error or "sin datos" }}{% endif %}</td>
+          <td data-field="mode">{% if row.dry_run %}dry-run{% elif row.dry_run is none %}—{% else %}real{% endif %}</td>
+          <td data-field="last">{{ row.last_start or "—" }}</td>
+          <td data-field="over">{{ row.overutilized if row.overutilized is not none else "—" }}</td>
+          <td data-field="under">{{ row.underutilized if row.underutilized is not none else "—" }}</td>
+          <td data-field="evicted">{{ row.evicted if row.evicted is not none else "—" }}</td>
+          <td>
+            <button type="button" class="btn secondary run-btn" data-cluster="{{ row.id }}" aria-label="Ejecutar pasada de {{ row.id }}">
+              <span class="run-spinner" hidden></span>
+              <span class="run-label">Ejecutar</span>
+            </button>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8">Sin clusters configurados.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <template id="info-col-cluster">Nombre del cluster, el mismo que el secret de ArgoCD. Enlace al detalle de policy y última corrida.</template>
+  <template id="info-col-agent"><code>ok</code> = la última pasada contra ese cluster terminó. Otro texto = no se pudo leer la API o falló la corrida.</template>
+  <template id="info-col-mode"><code>dry-run</code>: simula y no expulsa pods. <code>real</code>: crea evictions y el scheduler de ese cluster reubica los pods.</template>
+  <template id="info-col-last-run">Hora de inicio de la última pasada de esta app contra el cluster.</template>
+  <template id="info-col-over">Cantidad de nodos clasificados como sobreutilizados (por encima de umbrales de CPU/memoria/pods en la policy).</template>
+  <template id="info-col-under">Nodos subutilizados: candidatos a recibir pods reubicados desde nodos calientes.</template>
+  <template id="info-col-evictions">Pods evictados en la última pasada. En dry-run es lo que se habría movido.</template>
+  <div id="run-live" class="run-live" hidden>
+    <div class="run-live-head">
+      <span class="run-spinner" aria-hidden="true"></span>
+      <strong id="run-live-title">Pasada</strong>
+    </div>
+    <pre id="run-live-log" class="run-log" aria-live="polite"></pre>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/fleet-run.js?v={{ app_version }}"></script>
+{% endblock %}

@@ -1,0 +1,17 @@
+# Ejemplo de variables. Este repo no publica un chart.
+# Montá el proceso dentro de un cluster que pueda leer los secrets de ArgoCD
+# (kubeconfig de cada cluster destino) y evictar pods.
+#
+# Reemplazá todos los change-me antes de desplegar.
+
+env:
+  API_TOKEN: change-me-token
+  SESSION_SECRET: change-me-session
+  SERVICE_USER: admin
+  SERVICE_PASSWORD: change-me
+  DRY_RUN: "true"
+  CLUSTER_IDS: cluster-a,cluster-b
+  ARGOCD_NAMESPACE: argocd
+  OIDC_ENABLED: "false"
+  LOG_LEVEL: info
+  TZ: America/Argentina/Buenos_Aires

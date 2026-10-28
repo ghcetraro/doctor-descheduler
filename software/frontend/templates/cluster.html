@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}{{ cluster_id }} · {{ app_name }}{% endblock %}
+{% block page_title %}{{ cluster_id }}{% endblock %}
+{% block page_subtitle %}
+<p class="subtitle"><a href="/">Flota</a></p>
+{% endblock %}
+{% block content %}
+{% if load_error %}
+<p class="notice error" role="alert">{{ load_error }}</p>
+{% endif %}
+{% set snap = detail.snapshot or {} %}
+{% set policy = snap.policy or {} %}
+{% set cron = snap.cronjob or {} %}
+<section class="panel">
+  <h2>Política vigente</h2>
+  <dl class="kv">
+    <dt>Ciclo</dt><dd>{{ cron.name or "—" }}</dd>
+    <dt>Schedule</dt><dd><code>{{ cron.schedule or "—" }}</code></dd>
+    <dt>Zona</dt><dd>{{ cron.time_zone or "—" }}</dd>
+    <dt>Dry-run</dt><dd>{% if snap.dry_run %}sí{% else %}no{% endif %}</dd>
+    <dt>ConfigMap</dt><dd><code>{{ snap.policy_configmap or "—" }}</code></dd>
+  </dl>
+  {% if policy %}
+  <h2>Umbrales y exclusiones</h2>
+  <dl class="kv">
+    {% for item in detail.policy_summary or [] %}
+    <dt>{{ item.label }}</dt><dd>{{ item.value }}</dd>
+    {% endfor %}
+  </dl>
+  {% endif %}
+</section>
+
+{% set jobs = snap.jobs or [] %}
+{% if jobs %}
+{% set job = jobs[0] %}
+<section class="panel">
+  <h2>Última corrida</h2>
+  <p class="subtitle">{{ job.name }} · {{ job.start_time or "—" }}</p>
+  {% if job.notes %}
+  <ul>
+    {% for note in job.notes %}<li>{{ note }}</li>{% endfor %}
+  </ul>
+  {% endif %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Nodo</th><th>Clase</th><th>CPU</th><th>Memoria</th><th>Pods</th></tr>
+      </thead>
+      <tbody>
+        {% for node in job.nodes or [] %}
+        <tr>
+          <td>{{ node.name }}</td>
+          <td>{{ node.category }}</td>
+          <td>{{ node.usage_percentage.cpu }}%</td>
+          <td>{{ node.usage_percentage.memory }}%</td>
+          <td>{{ node.usage_percentage.pods }}%</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5">Sin clasificación de nodos en esta pasada.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if job.evictions %}
+  <h2>Pods de la corrida</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Pod</th><th>Detalle</th></tr></thead>
+      <tbody>
+        {% for ev in job.evictions %}
+        <tr><td>{{ ev.pod }}</td><td>{{ ev.line }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</section>
+{% endif %}
+
+<section class="panel">
+  <h2>Cambios de política</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Visto</th><th>Huella</th></tr></thead>
+      <tbody>
+        {% for rev in detail.policy_history or [] %}
+        <tr><td>{{ rev.seen_at }}</td><td><code>{{ rev.fingerprint }}</code></td></tr>
+        {% else %}
+        <tr><td colspan="2">Todavía no hay revisiones guardadas.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

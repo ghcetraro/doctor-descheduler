@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Perfil · {{ app_name }}{% endblock %}
+{% block page_title %}Perfil{% endblock %}
+{% block page_subtitle %}<p class="subtitle">Datos de la sesión activa.</p>{% endblock %}
+{% block content %}
+
+<section class="panel profile-panel">
+  {% if user_email or user_name %}
+  <div class="profile-header">
+    <div class="profile-avatar profile-avatar--large" aria-hidden="true">{{ (user_name or user_email)[0]|upper }}</div>
+    <div>
+      <h2 class="profile-title">{{ user_name or user_email }}</h2>
+      <p class="profile-subtitle">{% if oidc_enabled and user_sub %}Sesión activa vía OpenID{% else %}Sesión local{% endif %}</p>
+    </div>
+  </div>
+
+  <dl class="kv profile-fields">
+    <dt>Nombre</dt>
+    <dd>{{ user_name or "—" }}</dd>
+    <dt>Email</dt>
+    <dd>{{ user_email or "—" }}</dd>
+    <dt>Rol</dt>
+    <dd>{{ user_role or "—" }}</dd>
+    <dt>Subject (OIDC)</dt>
+    <dd><code>{{ user_sub or "—" }}</code></dd>
+  </dl>
+
+  <div class="profile-actions">
+    <a href="/logout" class="button primary">Cerrar sesión</a>
+  </div>
+  {% else %}
+  <p class="empty">No hay sesión activa.</p>
+  {% if oidc_enabled %}
+  <div class="profile-actions">
+    <a href="/oidc/login" class="button primary">Ingresar con OpenID</a>
+  </div>
+  {% elif web_auth_required %}
+  <div class="profile-actions">
+    <a href="/login" class="button primary">Ingresar</a>
+  </div>
+  {% else %}
+  <div class="profile-actions">
+    <a href="/" class="button primary">Ir al dashboard</a>
+  </div>
+  {% endif %}
+  {% endif %}
+</section>
+{% endblock %}

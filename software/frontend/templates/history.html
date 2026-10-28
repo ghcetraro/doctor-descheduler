@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Historial · {{ app_name }}{% endblock %}
+{% block page_title %}Historial{% endblock %}
+{% block page_subtitle %}
+<p class="subtitle">
+  Corridas guardadas
+  <button type="button" class="info-btn" data-info-for="info-history" aria-label="Más información" title="Más información">i</button>
+</p>
+<template id="info-history">
+  Cada pasada queda guardada en esta API, aunque el cluster de destino ya no tenga el Job.
+</template>
+{% endblock %}
+{% block content %}
+{% if load_error %}
+<p class="notice error" role="alert">{{ load_error }}</p>
+{% endif %}
+<section class="panel">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Cluster</th>
+          <th>Job</th>
+          <th>Inicio</th>
+          <th>OK</th>
+          <th>Altos</th>
+          <th>Bajos</th>
+          <th>Evictions</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for run in runs %}
+        <tr>
+          <td><a href="/cluster/{{ run.cluster }}">{{ run.cluster }}</a></td>
+          <td>{{ run.job_name }}</td>
+          <td>{{ run.start_time or "—" }}</td>
+          <td>{% if run.succeeded %}sí{% else %}no{% endif %}</td>
+          <td>{{ run.overutilized }}</td>
+          <td>{{ run.underutilized }}</td>
+          <td>{{ run.evicted }}</td>
+          <td>
+            <button type="button" class="log-btn" data-info-for="run-log-{{ loop.index }}" data-info-title="{{ run.job_name }}">Log</button>
+            <template id="run-log-{{ loop.index }}">
+              <p>{{ run.summary }}</p>
+              {% if run.moved_pods %}
+              <ul>
+                {% for pod in run.moved_pods %}<li><code>{{ pod }}</code></li>{% endfor %}
+              </ul>
+              {% endif %}
+              {% if run.lines %}
+              <pre class="log-excerpt">{% for line in run.lines %}{{ line }}
+{% endfor %}</pre>
+              {% endif %}
+            </template>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8">Sin corridas guardadas.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
